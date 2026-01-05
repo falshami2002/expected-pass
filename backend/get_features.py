@@ -5,7 +5,6 @@ def get_xy(row, pid):
     return row.get(f"{pid}_x"), row.get(f"{pid}_y")
 
 def get_vs(row, pid):
-    # velocity approx from speed & direction if present (metrica: *_s speed, *_d direction in radians)
     s = row.get(f"{pid}_s"); d = row.get(f"{pid}_d")
     if pd.isna(s) or pd.isna(d): 
         return None, None
@@ -30,7 +29,6 @@ def defenders_in_radius_point(point_xy, opp_ids, row, r=0.04):
     return int(c)
 
 def closing_speed_toward_point(point_xy, opp_ids, row):
-    # max positive closing speed among defenders (in normalized pitch units/s)
     px, py = point_xy
     vals = []
     for pid in opp_ids:
@@ -41,13 +39,11 @@ def closing_speed_toward_point(point_xy, opp_ids, row):
         rel = np.array([px-x, py-y])
         dist = np.linalg.norm(rel) + 1e-9
         dir_to_point = rel / dist
-        # projection of defender velocity toward the passer (positive = closing)
         v_close = float(vx*dir_to_point[0] + vy*dir_to_point[1])
         vals.append(v_close)
     return float(max(vals)) if vals else np.nan
 
 def time_to_reach_point(point_xy, opp_ids, row, eps=1e-3):
-    # min time-to-arrival assuming straight-line at current speed (crude but useful)
     px, py = point_xy
     times = []
     for pid in opp_ids:
@@ -62,7 +58,6 @@ def time_to_reach_point(point_xy, opp_ids, row, eps=1e-3):
     return float(min(times)) if times else np.nan
 
 def cone_pressure_in_pass_dir(passer_xy, receiver_xy, opp_ids, row, max_dist=0.20, half_angle_deg=30):
-    # defenders inside a forward cone from passer toward receiver
     ax, ay = passer_xy; bx, by = receiver_xy
     v = np.array([bx-ax, by-ay]); v_norm = np.linalg.norm(v) + 1e-9
     u = v / v_norm
@@ -74,13 +69,12 @@ def cone_pressure_in_pass_dir(passer_xy, receiver_xy, opp_ids, row, max_dist=0.2
         if pd.isna(x) or pd.isna(y): 
             continue
         w = np.array([x-ax, y-ay])
-        proj = float(np.dot(w, u))                  # along pass
+        proj = float(np.dot(w, u))              
         if 0 <= proj <= max_dist:
             w_norm = np.linalg.norm(w) + 1e-9
-            cos_ang = float(np.dot(w, u) / w_norm)  # angle to pass dir
+            cos_ang = float(np.dot(w, u) / w_norm)  
             if cos_ang >= cos_th:
                 cnt += 1
-                # lateral offset to the pass line inside the cone
                 lat = float(np.linalg.norm(w - proj*u))
                 min_lane_dist.append(lat)
     return int(cnt), (min(min_lane_dist) if min_lane_dist else np.nan)
